@@ -11,7 +11,7 @@ import seaborn as sns
 from sklearn.preprocessing import SplineTransformer
 from sklearn import linear_model
 from sklearn.preprocessing import MinMaxScaler
-from utils.functions import timeEvolution
+from utils.functions import timeEvolution, FA
 
 
 trainE = []
@@ -103,6 +103,8 @@ join_data = train[train.columns.difference(columns)].join(df)
 plt.boxplot(df)
 
 #_________________________________________________
+timeEvolution(1, train)#### chack the  time evolution for each sensor
+
 # check the trends over each sensor
 def trend_plot(n , data):
     for i in range(1, n):
@@ -146,25 +148,6 @@ ax.set_xticklabels(
 );
 
 
-
-
-from factor_analyzer import FactorAnalyzer
-
-def FA(data):
-    #data = wine_data.loc[:,'fixed_acidity':'alcohol']
-    fa = FactorAnalyzer()
-    n_factors = 6
-
-    fa.set_params(n_factors= n_factors, rotation="varimax")
-    fa.fit(data)
-
-    loadings = pd.DataFrame(fa.loadings_, columns = ['Factor {}'.format(i) for i in range(1, n_factors + 1)])
-    loadings.index = data.columns
-
-    varianza = pd.DataFrame(fa.get_factor_variance(), columns = loadings.columns)
-    varianza.index = ['SS Loadings', 'Proportional Var', 'Cumulative Var']
-    
-    return (loadings, varianza)
 
 df = join_data.loc[:, cols]
 (loadings, varianza) = FA(df)
