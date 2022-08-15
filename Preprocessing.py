@@ -4,8 +4,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 #___________________________________________________________________________________________________________
 ######### loading data##########
-names = ['id', 'cycle', 'setting1', 'setting2', 'setting3', 's1', 's2', 's3','s4', 's5', 's6', 's7', 's8',
-         's9', 's10', 's11', 's12', 's13', 's14', 's15', 's16', 's17', 's18', 's19', 's20', 's21']
+names = ["id", "cycle"] + ["setting_" + str(i) for i in range(3)] + ["s_" + str(i) for i in range(21)]
 
 # read training data
 train_data = pd.read_csv('Data/TrainSet.txt', sep=" ", header=None)
@@ -18,10 +17,18 @@ train_data = train_data.sort_values(['id','cycle'])
 test_data = pd.read_csv('Data/TestSet.txt', sep=" ", header=None)
 test_data.drop(test_data.columns[[26, 27]], axis=1, inplace=True)
 test_data.columns = names
+test_data = test_data.sort_values(['id','cycle'])
 
 # read ground truth data
 truth_df = pd.read_csv('Data/TestSet_RUL.txt', sep=" ", header=None)
 truth_df.drop(truth_df.columns[[1]], axis=1, inplace=True)
+
+cols = ['id', 'cycle', 'setting_0', 'setting_1', 'setting_2','s_1','s_2', 's_3', 's_6', 's_7', 's_8','s_10',
+       's_11', 's_12', 's_13', 's_14', 's_16', 's_19', 's_20']
+
+train_data = train_data[cols]
+test_data = test_data[cols]
+
 #___________________________________________________________________________
 
 n_turb = train_data["id"].unique().max()
@@ -34,6 +41,7 @@ train_data = train_data.merge(rul, on=['id'], how='left')
 train_data['RUL'] = train_data['max'] - train_data['cycle']
 train_data.drop('max', axis=1, inplace=True)
 
+train_data['health_condition'] = train_data.RUL / max(train_data.RUL)
 # generate label columns for training data
 # we will only make use of "label1" for binary classification, 
 # while trying to answer the question: is a specific engine going to fail within w1 cycles?
@@ -48,12 +56,15 @@ train_data.loc[train_data['RUL'] <= w0, 'label2'] = 2
 # MinMax normalization (from 0 to 1)
 
 train_data['cycle_norm'] = train_data['cycle']
-cols_normalize = train_data.columns.difference(['id','cycle','RUL','label1','label2'])
+cols_normalize = train_data.columns.difference(['id','cycle','RUL','label1','label2','health_condition' ])
 min_max_scaler = MinMaxScaler()
 norm_train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data[cols_normalize]),
                                columns=cols_normalize, index=train_data.index)
 join_data = train_data[train_data.columns.difference(cols_normalize)].join(norm_train_data)
 train_data = join_data.reindex(columns = train_data.columns)
+
+
+
 #save the training data processed
 train_data.to_csv('Data/train.csv', encoding='utf-8',index = None)
 
@@ -77,6 +88,7 @@ truth_df.drop('more', axis=1, inplace=True)
 test_data = test_data.merge(truth_df, on=['id'], how='left')
 test_data['RUL'] = test_data['max'] - test_data['cycle']
 test_data.drop('max', axis=1, inplace=True)
+test_data['health_condition'] = test_data.RUL / max(test_data.RUL)
 
 # generate label columns w0 and w1 for test data
 test_data['label1'] = np.where(test_data['RUL'] <= w1, 1, 0 )

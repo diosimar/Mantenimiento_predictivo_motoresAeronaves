@@ -9,3 +9,4 @@ Pillow == 9.2.0
 pandas == 1.4.3
 TensorFlow == 2.9.1
 Keras == 2.9.0
+factor-analyzer == 0.4.0
