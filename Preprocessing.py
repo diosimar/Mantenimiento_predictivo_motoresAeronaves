@@ -42,7 +42,7 @@ rul.columns = ['id', 'max']
 train_data = train_data.merge(rul, on=['id'], how='left')
 train_data['RUL'] = train_data['max'] - train_data['cycle']
 train_data.drop('max', axis=1, inplace=True)
-
+'''
 df = []
 for i in train_data.id.unique():
     data_ = train_data[train_data.id == i]
@@ -50,7 +50,7 @@ for i in train_data.id.unique():
     df.append(data_)
     
 train_data = pd.concat(df)
-
+'''
 # generate label columns for training data
 # we will only make use of "label1" for binary classification, 
 # while trying to answer the question: is a specific engine going to fail within w1 cycles?
@@ -65,7 +65,7 @@ train_data.loc[train_data['RUL'] <= w0, 'label2'] = 2
 # MinMax normalization (from 0 to 1)
 
 train_data['cycle_norm'] = train_data['cycle']
-cols_normalize = train_data.columns.difference(['id','cycle','RUL','label1','label2','health_condition' ])
+cols_normalize = train_data.columns.difference(['id','cycle','RUL','label1','label2' ])
 min_max_scaler = MinMaxScaler()
 norm_train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data[cols_normalize]),
                                columns=cols_normalize, index=train_data.index)
@@ -97,7 +97,7 @@ truth_df.drop('more', axis=1, inplace=True)
 test_data = test_data.merge(truth_df, on=['id'], how='left')
 test_data['RUL'] = test_data['max'] - test_data['cycle']
 test_data.drop('max', axis=1, inplace=True)
-
+'''
 df = []
 for i in test_data.id.unique():
     data_ = test_data[test_data.id == i]
@@ -105,7 +105,7 @@ for i in test_data.id.unique():
     df.append(data_)
     
 test_data = pd.concat(df)
-
+'''
 # generate label columns w0 and w1 for test data
 test_data['label1'] = np.where(test_data['RUL'] <= w1, 1, 0 )
 test_data['label2'] = test_data['label1']

@@ -122,6 +122,7 @@ trend_plot(n, train)
   
 describe_train = pd.Series(train_failure).describe()
 describe_test = pd.Series(test_end).describe()
+
 plt.boxplot(train_failure)
 plt.title('Boxplot  ciclos de falla de los motores - train dataset')
 #####

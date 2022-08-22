@@ -8,16 +8,15 @@ from keras.layers import Dense, Dropout, LSTM
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from utils.functions import reshapeFeatures, reshapeLabel, root_mean_squared_error,r2_keras
+#from utils.functions import reshapeFeatures, reshapeLabel, root_mean_squared_error,r2_keras
 #_____________________________________________________________
 ######### loading data##########
 train_data = pd.read_csv('Data/train.csv')
 test_data = pd.read_csv('Data/test.csv')
 n_turb = train_data['id'].unique().max()
-["s_" + str(i) for i in range(21)]
 
 # pick the feature columns 
-sensor_cols = ["s_" + str(i) for i in range(21)]
+sensor_cols = ["s_" + str(i) for i in range(0, 21)]
 #sensor_cols = ['s_1','s_2', 's_3', 's_6', 's_7', 's_8','s_10','s_11', 's_12', 's_13', 's_14', 's_16', 's_19', 's_20']
 sequence_cols = ['setting_0', 'setting_1', 'setting_2', 'cycle_norm']
 sequence_cols.extend(sensor_cols)
@@ -25,20 +24,49 @@ sequence_cols.extend(sensor_cols)
 # generator for the sequences
 sequence_length = 50
 
+def reshapeFeatures(id_df, seq_length, seq_cols):
+    """
+    Only sequences that meet the window-length are considered, no padding is used. This means for testing
+    we need to drop those which are below the window-length.
+    An alternative would be to pad sequences so that
+    we can use shorter ones.
+    
+    :param id_df: the data set to modify
+    :param seq_length: the length of the window
+    :param seq_cols: the columns concerned by the step
+    :return: a generator of the sequences
+    """
+    data_matrix = id_df[seq_cols].values
+    num_elements = data_matrix.shape[0]
+    for start, stop in zip(range(0, num_elements-seq_length), range(seq_length, num_elements)):
+        yield data_matrix[start:stop, :]
+
+
 feat_gen = (list(reshapeFeatures(train_data[train_data['id']==id], sequence_length, sequence_cols)) 
            for id in range(1, n_turb + 1))
-
+'''
 # val is a list of 192 - 50 = 142 bi-dimensional array (50 rows x 25 columns)
 val=list(reshapeFeatures(train_data[train_data['id']==1], sequence_length, sequence_cols))
 print(len(val))
-
+'''
 # generate sequences and convert to numpy array
 feat_array = np.concatenate(list(feat_gen)).astype(np.float32)
-
 
 print("The data set has now shape: {} entries, {} cycles and {} features.".format(feat_array.shape[0],
                                                                                   feat_array.shape[1],
                                                                                   feat_array.shape[2]))
+
+
+
+
+
+# function to generate label
+def reshapeLabel(id_df, seq_length=sequence_length, label=['RUL']):
+    """ Only sequences that meet the window-length are considered, no padding is used. This means for testing
+    we need to drop those which are below the window-length."""
+    data_matrix = id_df[label].values
+    num_elements = data_matrix.shape[0]
+    return data_matrix[seq_length: num_elements, :]
 
 # generate labels
 label_gen = [reshapeLabel(train_data[train_data['id']==id]) for id in range(1, n_turb + 1)]
@@ -46,6 +74,7 @@ label_gen = [reshapeLabel(train_data[train_data['id']==id]) for id in range(1, n
 label_array = np.concatenate(label_gen).astype(np.float32)
 print(label_array.shape)
 #__________________________________________________________________________
+
 ## Create a Recurrent Neural Network - LSTM (Regression)
 nb_features = feat_array.shape[2]
 nb_out = label_array.shape[1]
@@ -59,12 +88,12 @@ model.add(LSTM(units=25, return_sequences=False, name="lstm_2"))
 model.add(Dropout(0.2, name="dropout_2"))
 model.add(Dense(units=nb_out, name="dense_0"))
 model.add(Activation("linear", name="activation_0"))
-model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=[keras.metrics.RootMeanSquaredError(),keras.metrics.MeanAbsolutePercentageError(), 'mae'])
+model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=[keras.metrics.RootMeanSquaredError(),'mae'])
 
 print(model.summary())
 #__________________________________________________________________________
 ## Train the Recurrent Neural Network - LSTM
-output_path = 'model/regression_model_v0.h5'
+output_path = 'model/regression_model_v1.h5'
 
 epochs = 100
 batch_size = 200
@@ -100,7 +129,7 @@ plt.legend(['train', 'test'], loc='upper left')
 plt.show()
 #fig_acc.savefig("output/model_regression_loss.png")
 
-
+'''
 # summarize history for R^2
 fig_acc = plt.figure(figsize=(10, 10))
 plt.plot(history.history['r2_keras'])
@@ -110,7 +139,7 @@ plt.ylabel('R^2')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
-
+'''
 # summarize history for MAE
 fig_acc = plt.figure(figsize=(10, 10))
 plt.plot(history.history['mae'])
@@ -132,6 +161,9 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 plt.show()
 #fig_acc.savefig("output/model_rmse.png")
+
+y_pred = model.predict(feat_array,verbose=1, batch_size=200)
+y_pred
 
 #__________________________________________________________________________
 ## Create a Recurrent Neural Network - LSTM (binary_classification)
